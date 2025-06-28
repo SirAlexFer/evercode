@@ -28,3 +28,9 @@ class TransactionResponse(BaseModel):
     payment_type: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AnalyticsResponse(BaseModel):
+    total_spent: Decimal
+
+    model_config = ConfigDict(from_attributes=True)

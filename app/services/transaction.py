@@ -17,7 +17,7 @@ class TransactionService:
         self,
         user_id: int,
         date_from: Optional[datetime] = None,
-        date_to: Optional[datetime] = None
+        date_to: Optional[datetime] = None,
     ) -> List[Transaction]:
         """
         Возвращает все транзакции пользователя,
@@ -29,8 +29,7 @@ class TransactionService:
         stmt = select(Transaction).where(Transaction.user_id == user_id)
         if date_from and date_to:
             stmt = stmt.where(
-                Transaction.timestamp >= date_from,
-                Transaction.timestamp <= date_to
+                Transaction.timestamp >= date_from, Transaction.timestamp <= date_to
             )
         elif date_from:
             stmt = stmt.where(Transaction.timestamp >= date_from)
@@ -47,12 +46,13 @@ class TransactionService:
         txn = await self.db.get(Transaction, transaction_id)
         if not txn or txn.user_id != user_id:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Transaction not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found"
             )
         return txn
 
-    async def create_transaction(self, user_id: int, data: TransactionCreate) -> Transaction:
+    async def create_transaction(
+        self, user_id: int, data: TransactionCreate
+    ) -> Transaction:
         """
         Создаёт новую транзакцию для пользователя.
         """
@@ -81,9 +81,32 @@ class TransactionService:
         await self.db.commit()
 
 
-# Dependency провайдер
+class AnalyticsService(TransactionService):
+    """
+    Сервис для аналитики транзакций.
+    Наследуется от TransactionService для доступа к транзакциям.
+    """
+
+    async def get_total_spent(
+        self,
+        user_id: int,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+    ) -> float:
+        """
+        Возвращает общую сумму потраченных средств пользователем.
+        """
+        transactions = await self.get_transactions(user_id, date_from, date_to)
+        return sum(txn.amount for txn in transactions)
+
 
 def get_transaction_service(
-    db_session: AsyncSession = Depends(get_session)
+    db_session: AsyncSession = Depends(get_session),
 ) -> TransactionService:
     return TransactionService(db_session)
+
+
+def get_analytics_service(
+    db_session: AsyncSession = Depends(get_session),
+) -> AnalyticsService:
+    return AnalyticsService(db_session)

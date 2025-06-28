@@ -10,31 +10,38 @@ from app.core.jwt import get_current_payload
 router = APIRouter()
 
 
-
 @router.post(
-    '/create',
+    "/create",
     status_code=status.HTTP_201_CREATED,
-    summary='Создание пользователя и базовых категорий',
-    tags=['Авторизация']
+    summary="Создание пользователя и базовых категорий",
+    tags=["Авторизация"],
 )
 async def create(
     user_create: UserCreate,
     user_service: UserService = Depends(get_user_service),
-    category_service: CategoryService = Depends(get_category_service)
+    auth_service: AuthService = Depends(get_auth_service),
+    category_service: CategoryService = Depends(get_category_service),
 ):
     """
     Создание пользователя с автоматическим добавлением категорий по умолчанию.
+
     """
+    if not await auth_service.get_user_by_email(user_create.email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Пользователь с таким email уже существует",
+        )
     created_new_user = await user_service.create_user(user_create)
     await category_service.create_default_categories(created_new_user.id)
     return created_new_user
 
+
 @router.post(
-    '/login',
+    "/login",
     status_code=status.HTTP_200_OK,
     response_model=TokenResponse,
-    summary='Авторизация пользователя',
-    tags=['Авторизация']
+    summary="Авторизация пользователя",
+    tags=["Авторизация"],
 )
 async def login(
     request: Request,
@@ -46,33 +53,44 @@ async def login(
     Аутентификация пользователя и получение пары JWT.
     """
 
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.lower().startswith("bearer "):
-        token = auth_header.split(" ", 1)[1]
-        try:
-            payload = auth_service.verify_jwt(token)
-            user = await auth_service.get_user_by_email(payload.get('email'))
-            if user:
-                return await auth_service.create_tokens_pair(user)
-        except HTTPException:
-            pass
-
     user = await auth_service.get_user_by_email(user_login.email)
     if user:
         tokens = await auth_service.login(user_login.email, user_login.password)
         if tokens:
             return tokens
     raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail='Неверный email или пароль'
+        status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный email или пароль"
     )
 
+
+@router.get(
+    "/me",
+    status_code=status.HTTP_200_OK,
+    summary="Получение информации о текущем пользователе",
+    tags=["Авторизация"],
+)
+async def get_current_user(
+    payload: dict = Depends(get_current_payload),
+    user_service: AuthService = Depends(get_auth_service),
+):
+    """
+    Возвращает информацию о текущем пользователе.
+    """
+    email = payload.get("email")
+    user = await user_service.get_user_by_email(email)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден"
+        )
+    return user
+
+
 @router.post(
-    '/refresh',
+    "/refresh",
     status_code=status.HTTP_200_OK,
     response_model=TokenResponse,
-    summary='Обновление токенов',
-    tags=['Авторизация']
+    summary="Обновление токенов",
+    tags=["Авторизация"],
 )
 async def refresh_tokens(
     request: Request,
@@ -83,11 +101,10 @@ async def refresh_tokens(
     Принимает refresh_token и возвращает новую пару токенов.
     """
     payload = auth_service.verify_jwt(data.refresh_token)
-    user = await auth_service.get_user_by_email(payload.get('email'))
+    user = await auth_service.get_user_by_email(payload.get("email"))
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Пользователь не найден'
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден"
         )
     tokens = await auth_service.create_tokens_pair(user)
     return tokens
