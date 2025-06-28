@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+alembic
+python-dotenv
+gunicorn
+pydantic
+pydantic[email]
+pydantic_settings
+PyJWT
+werkzeug
+asyncpg
+orjson
+passlib[bcrypt]
