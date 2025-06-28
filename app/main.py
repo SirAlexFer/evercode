@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 
-from app.api.v1 import auth
+from app.api.v1 import auth, category, transaction
 from app.core.settings import settings
 
 
@@ -14,3 +14,4 @@ app = FastAPI(
 
 
 app.include_router(auth.router, prefix="/api/v1/auth")
+app.include_router(category.router, prefix="/api/v1/category")

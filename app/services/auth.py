@@ -1,5 +1,5 @@
 import jwt
-from jwt import decode, ExpiredSignatureError
+from jwt import decode, ExpiredSignatureError, InvalidTokenError
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from functools import lru_cache
@@ -7,7 +7,7 @@ from functools import lru_cache
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.exceptions import HTTPException
-from fastapi import Depends
+from fastapi import Depends, status
 
 from app.core.settings import settings
 from app.core.database import get_session
@@ -50,16 +50,19 @@ class AuthService:
         return None
 
     # ——— Генерация JWT ———
-    def _create_token(self, user_data={}, time=timedelta(minutes=15)) -> str:
-        expires_time = datetime.now(tz=timezone.utc) + time
+    def _create_token(self, user_data: dict, expires_delta: timedelta) -> str:
+        now = datetime.now(tz=timezone.utc)
+        expires_time = now + expires_delta
 
-        payload = {}
-
-        payload["email"] = user_data["email"]
-        payload["exp"] = expires_time
+        payload = {
+            "sub": str(user_data["id"]),    # уникальный идентификатор пользователя
+            "email": user_data["email"],    # почта — опционально, если нужна
+            "iat": now,                     # issued at
+            "exp": expires_time,            # expiration time
+        }
 
         token = jwt.encode(
-            payload=payload,
+            payload,
             key=self.secret_key,
             algorithm=self.algorithm,
         )
@@ -82,15 +85,26 @@ class AuthService:
         refresh = self.create_refresh_token(user_data)
         return TwoTokens(access_token=access, refresh_token=refresh)
 
-    def verify_jwt(token: str) -> dict:
+    def verify_jwt(self, token: str) -> dict:
+        """Декодирует JWT, проверяет подпись и срок, возвращает payload."""
         try:
-            payload = decode(
+            payload = jwt.decode(
                 token,
-                settings.authjwt_secret_key,
-                algorithms=[settings.authjwt_algorithm]
+                self.secret_key,
+                algorithms=[self.algorithm],
             )
-        except Exception:
-            raise HTTPException(401, "Token has expired")
+        except ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has expired",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        except InvalidTokenError:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         return payload
 
 
