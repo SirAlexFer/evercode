@@ -1,0 +1,79 @@
+from typing import List
+from fastapi import APIRouter, Depends, Response, status
+
+from app.core.jwt import get_current_payload
+from app.schemas.transaction import TransactionCreate, TransactionResponse
+from app.services.transaction import TransactionService, get_transaction_service
+
+router = APIRouter(prefix="/transactions", tags=["Транзакции"])
+
+
+@router.post(
+    "",
+    response_model=TransactionResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Создание транзакции",
+)
+async def create_transaction(
+    data: TransactionCreate,
+    payload: dict = Depends(get_current_payload),
+    service: TransactionService = Depends(get_transaction_service),
+):
+    """
+    Создает новую транзакцию для текущего пользователя.
+    """
+    user_id = int(payload.get("sub"))
+    return await service.create_transaction(user_id, data)
+
+
+@router.get(
+    "",
+    response_model=List[TransactionResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Получение списка транзакций",
+)
+async def list_transactions(
+    payload: dict = Depends(get_current_payload),
+    service: TransactionService = Depends(get_transaction_service),
+):
+    """
+    Возвращает список всех транзакций текущего пользователя.
+    """
+    user_id = int(payload.get("sub"))
+    return await service.get_transactions(user_id)
+
+
+@router.get(
+    "/{transaction_id}",
+    response_model=TransactionResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Получение транзакции по ID",
+)
+async def get_transaction(
+    transaction_id: int,
+    payload: dict = Depends(get_current_payload),
+    service: TransactionService = Depends(get_transaction_service),
+):
+    """
+    Возвращает одну транзакцию по ID для текущего пользователя.
+    """
+    user_id = int(payload.get("sub"))
+    return await service.get_transaction(transaction_id, user_id)
+
+
+@router.delete(
+    "/{transaction_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Удаление транзакции",
+)
+async def delete_transaction(
+    transaction_id: int,
+    payload: dict = Depends(get_current_payload),
+    service: TransactionService = Depends(get_transaction_service),
+):
+    """
+    Удаляет транзакцию по ID для текущего пользователя.
+    """
+    user_id = int(payload.get("sub"))
+    await service.delete_transaction(transaction_id, user_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
