@@ -1,5 +1,6 @@
-from typing import List
-from fastapi import APIRouter, Depends, Response, status
+from typing import List, Optional
+from datetime import datetime
+from fastapi import APIRouter, Depends, Response, status, Query
 
 from app.core.jwt import get_current_payload
 from app.schemas.transaction import TransactionCreate, TransactionResponse
@@ -30,17 +31,28 @@ async def create_transaction(
     "",
     response_model=List[TransactionResponse],
     status_code=status.HTTP_200_OK,
-    summary="Получение списка транзакций",
+    summary="Получение списка транзакций"
 )
 async def list_transactions(
+    date_from: Optional[datetime] = Query(
+        None,
+        description="Начальная дата фильтра (inclusive), формат ISO 8601"
+    ),
+    date_to: Optional[datetime] = Query(
+        None,
+        description="Конечная дата фильтра (inclusive), формат ISO 8601"
+    ),
     payload: dict = Depends(get_current_payload),
     service: TransactionService = Depends(get_transaction_service),
 ):
     """
     Возвращает список всех транзакций текущего пользователя.
+    Дополнительные параметры:
+    - date_from: ISO-формат начальной даты (включительно)
+    - date_to: ISO-формат конечной даты (включительно)
     """
     user_id = int(payload.get("sub"))
-    return await service.get_transactions(user_id)
+    return await service.get_transactions(user_id, date_from, date_to)
 
 
 @router.get(

@@ -2,10 +2,10 @@ from typing import List, Optional
 from datetime import datetime
 from fastapi import HTTPException, status, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select
 
-from app.models.transaction import Transaction
-from app.schemas.transaction import TransactionCreate, TransactionResponse
+from app.models.user import Transaction
+from app.schemas.transaction import TransactionCreate
 from app.core.database import get_session
 
 
@@ -13,13 +13,31 @@ class TransactionService:
     def __init__(self, db_session: AsyncSession):
         self.db = db_session
 
-    async def get_transactions(self, user_id: int) -> List[Transaction]:
+    async def get_transactions(
+        self,
+        user_id: int,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None
+    ) -> List[Transaction]:
         """
-        Возвращает все транзакции пользователя.
+        Возвращает все транзакции пользователя,
+        опционально отфильтрованные по диапазону дат.
+        :param user_id: ID пользователя
+        :param date_from: начальная дата (включительно)
+        :param date_to: конечная дата (включительно)
         """
-        result = await self.db.execute(
-            select(Transaction).where(Transaction.user_id == user_id)
-        )
+        stmt = select(Transaction).where(Transaction.user_id == user_id)
+        if date_from and date_to:
+            stmt = stmt.where(
+                Transaction.timestamp >= date_from,
+                Transaction.timestamp <= date_to
+            )
+        elif date_from:
+            stmt = stmt.where(Transaction.timestamp >= date_from)
+        elif date_to:
+            stmt = stmt.where(Transaction.timestamp <= date_to)
+
+        result = await self.db.execute(stmt)
         return result.scalars().all()
 
     async def get_transaction(self, transaction_id: int, user_id: int) -> Transaction:
@@ -41,6 +59,9 @@ class TransactionService:
         txn = Transaction(
             user_id=user_id,
             category_id=data.category_id,
+            item=data.item,
+            quantity=data.quantity,
+            location=data.location,
             amount=data.amount,
             timestamp=data.timestamp or datetime.utcnow(),
             payment_method=data.payment_method,

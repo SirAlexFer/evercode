@@ -15,3 +15,4 @@ app = FastAPI(
 
 app.include_router(auth.router, prefix="/api/v1/auth")
 app.include_router(category.router, prefix="/api/v1/category")
+app.include_router(transaction.router, prefix="/api/v1/transaction")

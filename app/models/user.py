@@ -62,12 +62,11 @@ class Transaction(ModelBase):
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
-    category_id = Column(
-        Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
-    )
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
+    item = Column(String(255), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    location = Column(String(255), nullable=True)
     amount = Column(Numeric(12, 2), nullable=False)
     timestamp = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     payment_method = Column(String(255), nullable=False)
@@ -80,5 +79,7 @@ class Transaction(ModelBase):
     def __repr__(self) -> str:
         return (
             f"<Transaction {self.id} User {self.user_id} "
-            f"Category {self.category_id} Amount {self.amount}>"
+            f"Category {self.category_id} Item {self.item} "
+            f"Quantity {self.quantity} Location {self.location} "
+            f"Amount {self.amount}>"
         )
