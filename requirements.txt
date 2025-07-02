@@ -13,3 +13,4 @@ werkzeug
 asyncpg
 orjson
 passlib[bcrypt]
+python-multipart

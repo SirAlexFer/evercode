@@ -1,7 +1,14 @@
 from fastapi import APIRouter, Body, Depends, Request, Response, status, HTTPException
 from pydantic import BaseModel
 from pydantic import ConfigDict
-from app.schemas.user import UserCreate, UserLogin, TokenResponse, TokenRefreshRequest
+from app.schemas.user import (
+    UserCreate,
+    UserLogin,
+    TokenResponse,
+    TokenRefreshRequest,
+    UserUpdate,
+    UserResponse
+)
 from app.services.user import UserService, get_user_service
 from app.services.auth import AuthService, get_auth_service
 from app.services.category import CategoryService, get_category_service
@@ -26,7 +33,7 @@ async def create(
     Создание пользователя с автоматическим добавлением категорий по умолчанию.
 
     """
-    if not await auth_service.get_user_by_email(user_create.email):
+    if await auth_service.get_user_by_email(user_create.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Пользователь с таким email уже существует",
@@ -83,6 +90,18 @@ async def get_current_user(
             status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден"
         )
     return user
+
+
+@router.patch(
+    "/me", response_model=UserResponse, summary="Обновление профиля пользователя", tags=["Обновление"],
+)
+async def update_profile(
+    data: UserUpdate,
+    payload: dict = Depends(get_current_payload),
+    svc: UserService = Depends(get_user_service),
+):
+    user_id = int(payload["sub"])
+    return await svc.update_user(user_id, data)
 
 
 @router.post(

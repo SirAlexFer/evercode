@@ -38,3 +38,9 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    username: Optional[str] = None
+    full_name: Optional[str] = None

@@ -2,17 +2,30 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 from pydantic import BaseModel, ConfigDict
+from enum import Enum
+from fastapi import Form
+
+
+class PaymentMethod(str, Enum):
+    debit_card = "Debit Card"
+    digital_wallet = "Digital Wallet"
+    cash = "Cash"
+
+
+class PaymentType(str, Enum):
+    expense = "Expense"
+    income  = "Income"
 
 
 class TransactionCreate(BaseModel):
-    category_id: Optional[int]
+    category_name: Optional[str]
     item: str
     quantity: int
     location: Optional[str] = None
     amount: Decimal
     timestamp: Optional[datetime] = None
-    payment_method: str
-    payment_type: str
+    payment_method: PaymentMethod
+    payment_type: PaymentType
 
 
 class TransactionResponse(BaseModel):

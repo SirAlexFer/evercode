@@ -26,7 +26,7 @@ async def create_category(
     Создает новую категорию для аутентифицированного пользователя.
     """
     user_id = int(payload.get("sub"))
-    return await service.create_category(user_id, data.name)
+    return await service.create_category(user_id, data.name, data.color)
 
 
 @router.get(

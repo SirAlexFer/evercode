@@ -36,3 +36,5 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+default_categories = ["Еда", "Транспорт", "Развлечение", "Услуги", "Другое"]

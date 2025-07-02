@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from app.models.user import Category
 from app.core.database import get_session
+from app.core.settings import default_categories
 
 
 class CategoryService:
@@ -27,7 +28,7 @@ class CategoryService:
         categories = await self.get_categories(user_id)
         return [cat.name for cat in categories]
 
-    async def create_category(self, user_id: int, name: str) -> Category:
+    async def create_category(self, user_id: int, name: str, color: str) -> Category:
         """
         Создаёт новую категорию для пользователя.
         """
@@ -40,7 +41,7 @@ class CategoryService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Category with this name already exists",
             )
-        new_cat = Category(user_id=user_id, name=name)
+        new_cat = Category(user_id=user_id, name=name, color=color)
         self.db.add(new_cat)
         await self.db.commit()
         await self.db.refresh(new_cat)
@@ -62,7 +63,7 @@ class CategoryService:
         """
         Добавляет набор категорий по умолчанию для нового пользователя и возвращает их.
         """
-        default_names = ["Food", "Transport", "Entertainment", "Utilities", "Other"]
+        default_names = default_categories
         created = []
         for name in default_names:
             cat = Category(user_id=user_id, name=name)
